@@ -30,7 +30,10 @@ request('https://steamcommunity.com/market/itemordershistogram' +
       if (!error && response.statusCode === 200) {
         parseResp(JSON.parse(body));
       } else {
-        handleLog('Error ' + response.statusCode);
+        accessLogStream.end(handleLog('Error ' + response.statusCode), 'utf8', () => {
+          console.log(handleLog('Error ' + response.statusCode));
+          process.exit();
+        });
       }
     });
 
