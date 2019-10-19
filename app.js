@@ -1,38 +1,37 @@
-var path = require('path');
-var fs = require('fs');
-var rfs = require('rotating-file-stream');
+// SteamMarketObserver tool
+// Type lot's name ids in the NAMESID array
+const NAMESID = ['7177182', 175880240];
+
+const request = require('request');
+const path = require('path');
+const fs = require('fs');
 let cTime = new Date(Date.now()).toISOString().
-    slice(0, 16).
-    replace(/-/g, '').
-    replace(/:/g, '');
+    slice(0, 16).replace(/:/g, '');
 
-var obsNameid = '7177182';
-var logDirectory = path.join(__dirname, 'log');
-
+const logDirectory = path.join(__dirname, 'log');
 
 fs.existsSync(logDirectory) || fs.mkdirSync(logDirectory);
 
-var accessLogStream = rfs(cTime + 'ID' + obsNameid + '.log', {
-  interval: '7d',
-  path: logDirectory,
-  compress: 'gzip',
-});
+for (const nameid of NAMESID) {
+  makeRequest(nameid);
+}
 
-
-request('https://steamcommunity.com/market/itemordershistogram' +
-    '?language=english&currency=1&item_nameid=' + obsNameid,
-    function(error, response, body) {
-      if (!error && response.statusCode === 200) {
-        parseResp(JSON.parse(body));
-      } else {
-        accessLogStream.end(handleLog('Error ' + response.statusCode), 'utf8', () => {
+function makeRequest(obsNameid) {
+  request('https://steamcommunity.com/market/itemordershistogram' +
+      '?language=english&currency=1&item_nameid=' + obsNameid,
+      function(error, response, body) {
+        if (!error && response.statusCode === 200) {
+          parseResp(JSON.parse(body), obsNameid);
+        } else {
+          const path = `${logDirectory}/`;
+          fs.writeFileSync(path + cTime + 'ID' + obsNameid + '.log',
+              handleLog('Error ' + response.statusCode), 'utf8');
           console.log(handleLog('Error ' + response.statusCode));
-          process.exit();
-        });
-      }
-    });
+        }
+      });
+}
 
-function parseResp(body) {
+function parseResp(body, obsNameid) {
   let logBody = {};
   if (body.success !== 1) {
     handleLog('Error: responce not success');
@@ -55,10 +54,9 @@ function parseResp(body) {
   logBody['ss'] = body['sell_order_summary'].slice(
       body['sell_order_summary'].indexOf('>') + 1,
       body['sell_order_summary'].indexOf('<', 3));
-  accessLogStream.end(JSON.stringify(logBody), 'utf8', () => {
-    console.log('Data has been written successfully..');
-    process.exit();
-  });
+  const path = `${logDirectory}/`;
+  fs.writeFileSync(path + cTime + 'ID' + obsNameid + '.log', JSON.stringify(logBody), 'utf8');
+  console.log('Data (nameid: ' + obsNameid + ') has been written successfully..');
 }
 
 function handleLog(str, options) {
