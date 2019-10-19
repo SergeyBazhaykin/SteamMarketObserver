@@ -1,5 +1,3 @@
-var express = require('express');
-var request = require('request');
 var path = require('path');
 var fs = require('fs');
 var rfs = require('rotating-file-stream');
@@ -11,7 +9,6 @@ let cTime = new Date(Date.now()).toISOString().
 var obsNameid = '7177182';
 var logDirectory = path.join(__dirname, 'log');
 
-var app = express();
 
 fs.existsSync(logDirectory) || fs.mkdirSync(logDirectory);
 
@@ -21,8 +18,6 @@ var accessLogStream = rfs(cTime + 'ID' + obsNameid + '.log', {
   compress: 'gzip',
 });
 
-app.use(express.json());
-app.use(express.urlencoded({extended: false}));
 
 request('https://steamcommunity.com/market/itemordershistogram' +
     '?language=english&currency=1&item_nameid=' + obsNameid,
@@ -74,5 +69,3 @@ function handleLog(str, options) {
   // todo options
   return res;
 }
-
-module.exports = app;
