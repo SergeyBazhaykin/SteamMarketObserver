@@ -1,6 +1,6 @@
 // SteamMarketObserver tool
-// Type lot's name ids in the NAMESID array
-const NAMESID = ['7177182', 175880240];
+// Type lot's name ids in the NAMEIDS array
+const NAMEIDS = ['7177182', 175880240];
 
 const request = require('request');
 const path = require('path');
@@ -12,7 +12,7 @@ const logDirectory = path.join(__dirname, 'log');
 
 fs.existsSync(logDirectory) || fs.mkdirSync(logDirectory);
 
-for (const nameid of NAMESID) {
+for (const nameid of NAMEIDS) {
   makeRequest(nameid);
 }
 
@@ -24,9 +24,15 @@ function makeRequest(obsNameid) {
           parseResp(JSON.parse(body), obsNameid);
         } else {
           const path = `${logDirectory}/`;
-          fs.writeFileSync(path + cTime + 'ID' + obsNameid + '.log',
-              handleLog('Error ' + response.statusCode), 'utf8');
-          console.log(handleLog('Error ' + response.statusCode));
+          const errorMessage = 'Error (nameid: ' + obsNameid + ') ' +
+              response.statusCode;
+          fs.writeFile(path + '!E' + cTime + 'ID' + obsNameid + '.log',
+              JSON.stringify({
+                success: false,
+                error: errorMessage,
+              }),
+              'utf8',
+              () => console.log(errorMessage));
         }
       });
 }
@@ -34,7 +40,16 @@ function makeRequest(obsNameid) {
 function parseResp(body, obsNameid) {
   let logBody = {};
   if (body.success !== 1) {
-    handleLog('Error: responce not success');
+    const path = `${logDirectory}/`;
+    const errorMessage = 'Error: response (nameid: ' + obsNameid +
+        ') not success';
+    fs.writeFile(path + '!E' + cTime + 'ID' + obsNameid + '.log',
+        JSON.stringify({
+          success: false,
+          error: errorMessage,
+        }),
+        'utf8', () =>
+            console.log(errorMessage));
   }
   logBody['bg'] = body['buy_order_graph'].map((v, i, a) => {
     a[i].length = 2;
@@ -55,15 +70,7 @@ function parseResp(body, obsNameid) {
       body['sell_order_summary'].indexOf('>') + 1,
       body['sell_order_summary'].indexOf('<', 3));
   const path = `${logDirectory}/`;
-  fs.writeFileSync(path + cTime + 'ID' + obsNameid + '.log', JSON.stringify(logBody), 'utf8');
-  console.log('Data (nameid: ' + obsNameid + ') has been written successfully..');
-}
-
-function handleLog(str, options) {
-  let res = '';
-  if (!options) {
-    res = str;
-  }
-  // todo options
-  return res;
+  fs.writeFile(path + cTime + 'ID' + obsNameid + '.log',
+      JSON.stringify(logBody), 'utf8', () => console.log(
+          'Data (nameid: ' + obsNameid + ') has been written successfully..'));
 }
